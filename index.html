@@ -153,20 +153,23 @@
 
     // 2. ปรับปรุงฟังก์ชันค้นหาบุคคลโดยใช้ SweetAlert2
     async function searchFace() {
-        const file = document.getElementById('searchFile').files[0];
-        if (!file) return Swal.fire('คำแนะนำ', 'กรุณาเลือกไฟล์รูปภาพก่อนครับ', 'info');
-        if (!isAiReady) return Swal.fire('รอสักครู่', 'ระบบ AI ยังโหลดไม่เสร็จสิ้น', 'warning');
+    const file = document.getElementById('searchFile').files[0];
+    if (!file) return Swal.fire('คำแนะนำ', 'กรุณาเลือกไฟล์รูปภาพก่อนครับ', 'info');
+    if (!isAiReady) return Swal.fire('รอสักครู่', 'ระบบ AI ยังโหลดไม่เสร็จสิ้น', 'warning');
 
-        // แสดงแจ้งเตือน "อยู่ระหว่างค้นหาข้อมูล" แบบมีวงล้อโหลด
-        Swal.fire({
-            title: 'อยู่ระหว่างค้นหาข้อมูล',
-            text: 'ระบบกำลังประมวลผลใบหน้าและตรวจสอบฐานข้อมูล...',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+    // 1. แสดง Popup โหลดก่อนเป็นอันดับแรก
+    Swal.fire({
+        title: 'อยู่ระหว่างค้นหาข้อมูล',
+        text: 'ระบบกำลังประมวลผลใบหน้าและตรวจสอบฐานข้อมูล...',
+        allowOutsideClick: false,
+        showConfirmButton: false, // ปิดปุ่มตกลงเพื่อให้ดูเหมือนกำลังโหลดจริงๆ
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 
+    // 2. ใช้ setTimeout เพื่อให้ Browser วาดหน้าจอ Swal ให้เสร็จก่อนเริ่มงานหนัก
+    setTimeout(async () => {
         try {
             const img = await faceapi.bufferToImage(file);
             document.getElementById('queryImgView').src = URL.createObjectURL(file);
@@ -187,18 +190,17 @@
                 if (dist < bestMatch.distance) bestMatch = { ...f, distance: dist };
             });
 
-            // ปิด Loading
+            // 3. ปิด Loading เมื่อทุกอย่างเสร็จสิ้น
             Swal.close();
 
             if (bestMatch.distance < 0.40) {
                 const score = Math.round((1 - bestMatch.distance) * 100);
                 
-                // แจ้งเตือนเมื่อพบข้อมูล
                 Swal.fire({
                     icon: 'success',
                     title: 'พบข้อมูลบุคคล',
                     text: `คุณคือ: ${bestMatch.name} (ความเหมือน ${score}%)`,
-                    timer: 2000
+                    timer: 2500
                 });
 
                 document.getElementById('matchScore').innerText = score + "%";
@@ -210,9 +212,11 @@
                 Swal.fire({ icon: 'warning', title: 'ไม่พบข้อมูล', text: 'ไม่พบบุคคลที่ตรงกันในฐานข้อมูล' });
             }
         } catch (e) {
+            console.error(e);
             Swal.fire({ icon: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e.message });
         }
-    }
+    }, 100); // ดีเลย์ 0.1 วินาทีเพื่อให้ UI แสดงผลทัน
+}
 
     async function startSync() {
         // ... (สามารถเปลี่ยน alert ใน startSync เป็น Swal ได้เช่นกันหากต้องการ)
