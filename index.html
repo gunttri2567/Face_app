@@ -96,22 +96,40 @@
 
     // ระบบ Login เปลี่ยนเป็น Swal
     async function handleLogin() {
-        const user = document.getElementById('user').value;
-        const pass = document.getElementById('pass').value;
-        try {
-            const resp = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "login", user, pass }) });
-            const data = await resp.json();
-            if (data.result) {
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainPage').style.display = 'block';
-                loadModels();
-            } else { 
-                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'รหัสผ่านไม่ถูกต้อง' });
-            }
-        } catch (e) { 
-            Swal.fire({ icon: 'error', title: 'การเชื่อมต่อ', text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้' });
+    const user = document.getElementById('user').value;
+    const pass = document.getElementById('pass').value;
+
+    if (!user || !pass) return Swal.fire('กรุณากรอกข้อมูล', 'ใส่อีเมลและรหัสผ่านให้ครบถ้วน', 'warning');
+
+    // แสดง Loading ระหว่างรอตรวจสอบรหัสผ่าน
+    Swal.fire({
+        title: 'กำลังเข้าสู่ระบบ',
+        text: 'กรุณารอสักครู่...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
+    });
+
+    try {
+        const resp = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "login", user, pass }) });
+        const data = await resp.json();
+        
+        Swal.close(); // ปิด Loading เมื่อได้รับคำตอบ
+
+        if (data.result) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            loadModels();
+        } else { 
+            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+    } catch (e) { 
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'การเชื่อมต่อ', text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้' });
     }
+}
 
     async function loadModels() {
         const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
@@ -157,21 +175,28 @@
     if (!file) return Swal.fire('คำแนะนำ', 'กรุณาเลือกไฟล์รูปภาพก่อนครับ', 'info');
     if (!isAiReady) return Swal.fire('รอสักครู่', 'ระบบ AI ยังโหลดไม่เสร็จสิ้น', 'warning');
 
-    // 1. แสดง Popup โหลดก่อนเป็นอันดับแรก
+    // --- ส่วนที่เพิ่ม: ล้างข้อมูลการค้นหาเดิมก่อนเริ่มใหม่ ---
+    document.getElementById('resultPanel').style.display = 'none'; // ซ่อนแผงผลลัพธ์เก่า
+    document.getElementById('queryImgView').src = "";              // ล้างรูปเก่า
+    document.getElementById('databaseImgView').src = "";           // ล้างรูปเก่า
+    document.getElementById('displayName').innerText = "";         // ล้างชื่อเก่า
+    document.getElementById('displayIdCard').innerText = "";       // ล้างเลขบัตรเก่า
+    // --------------------------------------------------
+
     Swal.fire({
         title: 'อยู่ระหว่างค้นหาข้อมูล',
         text: 'ระบบกำลังประมวลผลใบหน้าและตรวจสอบฐานข้อมูล...',
         allowOutsideClick: false,
-        showConfirmButton: false, // ปิดปุ่มตกลงเพื่อให้ดูเหมือนกำลังโหลดจริงๆ
+        showConfirmButton: false,
         didOpen: () => {
             Swal.showLoading();
         }
     });
 
-    // 2. ใช้ setTimeout เพื่อให้ Browser วาดหน้าจอ Swal ให้เสร็จก่อนเริ่มงานหนัก
     setTimeout(async () => {
         try {
             const img = await faceapi.bufferToImage(file);
+            // แสดงรูปใหม่ที่ผู้ใช้เพิ่งเลือก
             document.getElementById('queryImgView').src = URL.createObjectURL(file);
 
             const queryDet = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
@@ -190,7 +215,6 @@
                 if (dist < bestMatch.distance) bestMatch = { ...f, distance: dist };
             });
 
-            // 3. ปิด Loading เมื่อทุกอย่างเสร็จสิ้น
             Swal.close();
 
             if (bestMatch.distance < 0.40) {
@@ -199,8 +223,8 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'พบข้อมูลบุคคล',
-                    text: `คุณคือ: ${bestMatch.name} (ความเหมือน ${score}%)`,
-                    timer: 2500
+                    text: `คุณคือ: ${bestMatch.name}`,
+                    timer: 2000
                 });
 
                 document.getElementById('matchScore').innerText = score + "%";
@@ -215,7 +239,7 @@
             console.error(e);
             Swal.fire({ icon: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e.message });
         }
-    }, 100); // ดีเลย์ 0.1 วินาทีเพื่อให้ UI แสดงผลทัน
+    }, 100);
 }
 
     async function startSync() {
