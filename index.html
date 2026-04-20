@@ -137,6 +137,9 @@
     }
 
     async function searchFace() {
+
+	// 1. เพิ่ม Alert แจ้งเตือนทันทีที่กดปุ่ม
+    alert("อยู่ระหว่างค้นหาข้อมูล");
         const file = document.getElementById('searchFile').files[0];
         if (!file || !isAiReady) return;
 
