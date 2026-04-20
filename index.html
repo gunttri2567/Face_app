@@ -3,23 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Face Recognition LIFF</title>
+    <title>AI Face Recognition System (LIFF)</title>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #3b82f6; --success: #22c55e; --bg: #0f172a; --card: rgba(255,255,255,0.05); }
+        :root { --primary: #3b82f6; --success: #22c55e; --warning: #f59e0b; --bg: #0f172a; --card: rgba(255,255,255,0.05); }
         body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; }
-        .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; box-sizing: border-box; }
+        .container { max-width: 700px; margin: auto; }
+        .card { background: var(--card); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px; }
+        h4 { margin-top: 0; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        input, button { width: 100%; padding: 14px; margin-top: 12px; border-radius: 10px; border: none; box-sizing: border-box; font-size: 15px; }
         input { background: #1e293b; color: white; border: 1px solid #334155; }
-        button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:disabled { background: #64748b; cursor: not-allowed; }
-        #loginPage { display: block; text-align: center; margin-top: 10vh; }
+        button { color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        
+        #loginPage { display: block; text-align: center; margin-top: 8vh; }
         #mainPage { display: none; }
-        .img-view { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-top: 10px; background: #000; }
-        #status { text-align: center; font-weight: bold; margin: 15px 0; color: #94a3b8; }
-        .result-panel { display: none; border-top: 4px solid var(--primary); padding-top: 20px; }
+        
+        #status { text-align: center; font-weight: bold; margin-bottom: 20px; color: #94a3b8; }
+        
+        /* Layout สำหรับรูปภาพเปรียบเทียบ */
+        .result-flex { display: flex; justify-content: center; align-items: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+        .img-box { text-align: center; flex: 1; min-width: 150px; }
+        .img-view { width: 100%; max-width: 180px; height: 180px; object-fit: cover; border-radius: 12px; border: 2px solid #334155; }
+        .label-text { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+        
+        .result-info { text-align: center; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+        .score-text { font-size: 36px; font-weight: bold; color: var(--success); }
     </style>
 </head>
 <body>
@@ -29,164 +39,159 @@
         <h2>🔒 เข้าสู่ระบบ</h2>
         <input type="text" id="user" placeholder="ชื่อผู้ใช้งาน">
         <input type="password" id="pass" placeholder="รหัสผ่าน">
-        <button onclick="handleLogin()" id="btnLogin">เข้าสู่ระบบ</button>
+        <button onclick="handleLogin()" style="background: var(--primary);">Login</button>
     </div>
 
     <div id="mainPage">
-        <h3 style="text-align:center;">🕵️ ระบบสแกนใบหน้า (LIFF)</h3>
-        <div id="status">⏳ กำลังโหลดโมเดล AI...</div>
+        <h2 style="text-align:center;">🕵️ ระบบฐานข้อมูลและเปรียบเทียบใบหน้า</h2>
+        <div id="status">⏳ กำลังเตรียมความพร้อมระบบ AI...</div>
 
         <div class="card">
-            <h4>1. ลงทะเบียนใบหน้า</h4>
+            <h4>1. นำข้อมูลเข้าฐานข้อมูล (Enrollment)</h4>
             <input type="text" id="personName" placeholder="ชื่อ-นามสกุล">
-            <input type="text" id="idCard" placeholder="เลขบัตร 13 หลัก" maxlength="13">
+            <input type="text" id="idCard" placeholder="เลขประจำตัว 13 หลัก" maxlength="13">
             <input type="file" id="uploadFile" accept="image/*">
-            <button onclick="enrollFace()">บันทึกข้อมูล</button>
+            <button onclick="enrollFace()" style="background: var(--primary);">บันทึกลงฐานข้อมูล</button>
         </div>
 
         <div class="card" style="border-left: 5px solid var(--success);">
-            <h4>2. เปรียบเทียบใบหน้า</h4>
+            <h4>2. ค้นหาใบหน้าจากฐานข้อมูล (Comparison)</h4>
             <input type="file" id="searchFile" accept="image/*">
-            <button onclick="searchFace()" style="background: var(--success);">เริ่มการค้นหา</button>
+            <button onclick="searchFace()" style="background: var(--success);">เริ่มการค้นหาบุคคล</button>
         </div>
 
-        <div id="resultPanel" class="card result-panel">
-            <h4 style="text-align:center;">📊 ผลการตรวจสอบ</h4>
-            <div style="display:flex; gap:10px;">
-                <img id="queryImgView" class="img-view">
-                <img id="databaseImgView" class="img-view">
+        <div class="card" style="border: 1px dashed var(--warning); background: rgba(245, 158, 11, 0.05);">
+            <h4 style="color: var(--warning);">⚙️ ระบบนำเข้าข้อมูลอัตโนมัติ (Batch Sync)</h4>
+            <p style="font-size: 13px; color: #94a3b8;">สแกนใบหน้าจาก URL ที่บันทึกไว้ใน Google Sheets (ชีต4)</p>
+            <button id="btnSync" onclick="startSync()" style="background: var(--warning);">🔄 เริ่มการสแกนใบหน้าจาก URL</button>
+            <div id="syncStatus" style="margin-top:15px; font-size: 14px; color: var(--warning); text-align: center;"></div>
+        </div>
+
+        <div id="resultPanel" class="card" style="display: none;">
+            <h4 style="text-align:center;">📊 ผลการตรวจสอบใบหน้า</h4>
+            <div class="result-flex">
+                <div class="img-box">
+                    <div class="label-text">รูปภาพที่ตรวจสอบ</div>
+                    <img id="queryImgView" class="img-view" style="border-color: var(--primary);">
+                </div>
+                <div class="img-box">
+                    <div class="label-text">ข้อมูลในระบบ (Match)</div>
+                    <img id="databaseImgView" class="img-view" style="border-color: var(--success);">
+                </div>
             </div>
-            <div style="text-align:center; margin-top:15px;">
-                <div id="matchScore" style="font-size:32px; color:var(--success); font-weight:bold;">0%</div>
-                <div id="displayName" style="font-size:18px; margin-top:10px;"></div>
+            <div class="result-info">
+                <div class="label-text">ความเหมือน</div>
+                <div id="matchScore" class="score-text">0%</div>
+                <div id="displayName" style="font-size: 20px; font-weight: bold; margin-top: 10px;"></div>
+                <div id="displayIdCard" style="font-size: 16px; color: #94a3b8; margin-top: 5px;"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // ⚠️ แก้ไขจุดนี้: ใส่ URL ของ Google Apps Script ที่ Deploy แล้ว
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwK9r4v42P7mrMyRrfJvFXF0h2J4CY9-YOVrFHDMicHcKRHYRJoevFZUDUAYM_4Phqy/exec"; 
-    
     let isAiReady = false;
 
-    // 1. ระบบ Login (เรียกผ่าน fetch POST)
     async function handleLogin() {
         const user = document.getElementById('user').value;
         const pass = document.getElementById('pass').value;
-        const btn = document.getElementById('btnLogin');
-        
-        if(!user || !pass) return alert("กรุณากรอกข้อมูล");
-        
-        btn.disabled = true;
-        btn.innerText = "⏳ กำลังตรวจสอบ...";
-
         try {
-            const resp = await fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "login", user, pass })
-            });
+            const resp = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "login", user, pass }) });
             const data = await resp.json();
-            
-            if (data.result === true) {
+            if (data.result) {
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainPage').style.display = 'block';
                 loadModels();
-            } else {
-                alert("❌ ชื่อหรือรหัสผ่านผิด");
-            }
-        } catch (e) {
-            alert("Error: ระบบขัดข้อง กรุณาเช็คการตั้งค่า CORS หรือ URL");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "เข้าสู่ระบบ";
-        }
+            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+        } catch (e) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อ"); }
     }
 
-    // 2. โหลด AI Models
     async function loadModels() {
-        const statusEl = document.getElementById('status');
-        try {
-            const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
-            await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-            isAiReady = true;
-            statusEl.innerText = '✅ AI พร้อมทำงาน';
-            statusEl.style.color = '#22c55e';
-        } catch (err) {
-            statusEl.innerText = '❌ โหลด AI ผิดพลาด';
-        }
+        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        isAiReady = true;
+        document.getElementById('status').innerText = "✅ ระบบ AI และฐานข้อมูลพร้อมใช้งาน";
+        document.getElementById('status').style.color = "#22c55e";
     }
 
-    // 3. ลงทะเบียนใบหน้า (Enroll)
     async function enrollFace() {
         const name = document.getElementById('personName').value;
         const idCard = document.getElementById('idCard').value;
         const file = document.getElementById('uploadFile').files[0];
-        if (!isAiReady || !name || !file) return alert("ข้อมูลไม่ครบ");
+        if (!isAiReady || !name || !file) return alert("กรุณาใส่ข้อมูลให้ครบ");
 
         const img = await faceapi.bufferToImage(file);
-        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        
-        if (!detection) return alert("ตรวจไม่พบใบหน้า");
+        const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+        if (!det) return alert("ไม่พบใบหน้า");
 
-        // ตัดภาพส่วนหน้าทำ Base64
-        const faceCanvas = await faceapi.extractFaces(img, [detection.detection.box]);
-        const base64 = faceCanvas[0].toDataURL();
-
+        const faceCanvas = await faceapi.extractFaces(img, [det.detection.box]);
         const resp = await fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify({
-                action: "enroll",
-                name: name,
-                idCard: idCard,
-                image: base64,
-                embedding: Array.from(detection.descriptor)
-            })
+            body: JSON.stringify({ action: "enroll", name, idCard, image: faceCanvas[0].toDataURL(), embedding: Array.from(det.descriptor) })
         });
         const res = await resp.json();
         alert(res.result);
     }
 
-    // 4. เปรียบเทียบใบหน้า (Search)
     async function searchFace() {
         const file = document.getElementById('searchFile').files[0];
         if (!file || !isAiReady) return;
 
-        document.getElementById('status').innerText = "⏳ กำลังเปรียบเทียบ...";
         const img = await faceapi.bufferToImage(file);
         document.getElementById('queryImgView').src = URL.createObjectURL(file);
 
         const queryDet = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        if (!queryDet) return alert("ไม่พบใบหน้า");
+        if (!queryDet) return alert("ไม่พบใบหน้าในรูปที่เลือก");
 
-        // ดึงข้อมูลจาก GAS ด้วย GET
         const resp = await fetch(`${GAS_URL}?action=getAllFaces`);
         const dbFaces = await resp.json();
 
-        let bestMatch = { distance: 1.0, name: "ไม่พบข้อมูล", url: "" };
-        const threshold = 0.40; // 🎯 ปรับความเข้มงวดตรงนี้
-
-        dbFaces.forEach(face => {
-            const dist = faceapi.euclideanDistance(queryDet.descriptor, new Float32Array(face.embedding));
-            if (dist < bestMatch.distance) {
-                bestMatch = { ...face, distance: dist };
-            }
+        let bestMatch = { distance: 1.0, name: "ไม่พบข้อมูล", idCard: "", url: "" };
+        dbFaces.forEach(f => {
+            const dist = faceapi.euclideanDistance(queryDet.descriptor, new Float32Array(f.embedding));
+            if (dist < bestMatch.distance) bestMatch = { ...f, distance: dist };
         });
 
-        if (bestMatch.distance < threshold) {
+        if (bestMatch.distance < 0.40) {
             const score = Math.round((1 - bestMatch.distance) * 100);
             document.getElementById('matchScore').innerText = score + "%";
-            document.getElementById('displayName').innerText = bestMatch.name;
+            document.getElementById('displayName').innerText = "ชื่อ: " + bestMatch.name;
+            document.getElementById('displayIdCard').innerText = "เลขบัตร: " + bestMatch.idCard;
             document.getElementById('databaseImgView').src = bestMatch.url;
             document.getElementById('resultPanel').style.display = 'block';
-        } else {
-            alert("❌ ไม่พบบุคคลที่ตรงกัน");
-        }
-        document.getElementById('status').innerText = "✅ ค้นหาเสร็จสิ้น";
+        } else { alert("ไม่พบบุคคลที่ตรงกันในฐานข้อมูล"); }
+    }
+
+    async function startSync() {
+        const syncStatus = document.getElementById('syncStatus');
+        const btn = document.getElementById('btnSync');
+        btn.disabled = true;
+        syncStatus.innerText = "⏳ กำลังดึงรายการจาก Google Sheets...";
+
+        try {
+            const resp = await fetch(`${GAS_URL}?action=syncTasks`);
+            const tasks = await resp.json();
+            if (tasks.length === 0) { syncStatus.innerText = "✅ ข้อมูลอัปเดตครบถ้วนแล้ว"; btn.disabled = false; return; }
+
+            let done = 0;
+            for (let t of tasks) {
+                syncStatus.innerText = `⏳ สแกน (${done + 1}/${tasks.length}): ${t.name}`;
+                try {
+                    const img = await faceapi.fetchImage('https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&refresh=2592000&url=' + encodeURIComponent(t.url));
+                    const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+                    if (det) {
+                        await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "update", name: t.name, idCard: t.idCard, image: t.url, embedding: Array.from(det.descriptor) }) });
+                        done++;
+                    }
+                } catch (e) { console.warn("Skip:", t.name); }
+            }
+            syncStatus.innerText = `🎉 Sync สำเร็จทั้งหมด ${done} รายการ`;
+        } catch (e) { syncStatus.innerText = "❌ เกิดข้อผิดพลาดในการ Sync"; }
+        btn.disabled = false;
     }
 </script>
-
 </body>
 </html>
