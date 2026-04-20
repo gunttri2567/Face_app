@@ -6,6 +6,7 @@
     <title>AI Face Recognition System (LIFF)</title>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
@@ -94,6 +95,36 @@
 </div>
 
 <script>
+    // ⚠️ แก้ไขจุดนี้: นำ LIFF ID จาก LINE Developers Console มาใส่
+const MY_LIFF_ID = "2008093948-MRoxnQcs"; 
+
+window.onload = function() {
+    initLiff();
+};
+
+async function initLiff() {
+    try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (!liff.isLoggedIn()) {
+            // ถ้ายังไม่ Login ให้บังคับ Login ทันที
+            liff.login();
+        } else {
+            // ถ้า Login แล้ว ให้เริ่มทำงานตามปกติ
+            console.log("LINE Login สำเร็จ");
+            
+            // (ทางเลือก) ดึงชื่อผู้ใช้จาก LINE มาทักทาย
+            const profile = await liff.getProfile();
+            console.log("สวัสดีคุณ: " + profile.displayName);
+            
+            // เมื่อ Login LINE ผ่านแล้ว ค่อยเริ่มเตรียมระบบเข้าสู่ระบบของแอปคุณ
+            // หรือจะข้ามหน้า Login ของแอปคุณไปเลยก็ได้ถ้าใช้ LINE ID ตรวจสอบแทน
+        }
+    } catch (err) {
+        console.error("LIFF Init Error:", err);
+        Swal.fire('Error', 'ไม่สามารถเชื่อมต่อ LINE ได้', 'error');
+    }
+}
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwK9r4v42P7mrMyRrfJvFXF0h2J4CY9-YOVrFHDMicHcKRHYRJoevFZUDUAYM_4Phqy/exec"; 
     let isAiReady = false;
 
