@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Face Recognition System (LIFF)</title>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #3b82f6; --success: #22c55e; --warning: #f59e0b; --bg: #0f172a; --card: rgba(255,255,255,0.05); }
@@ -22,7 +24,6 @@
         
         #status { text-align: center; font-weight: bold; margin-bottom: 20px; color: #94a3b8; }
         
-        /* Layout สำหรับรูปภาพเปรียบเทียบ */
         .result-flex { display: flex; justify-content: center; align-items: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
         .img-box { text-align: center; flex: 1; min-width: 150px; }
         .img-view { width: 100%; max-width: 180px; height: 180px; object-fit: cover; border-radius: 12px; border: 2px solid #334155; }
@@ -93,6 +94,7 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwK9r4v42P7mrMyRrfJvFXF0h2J4CY9-YOVrFHDMicHcKRHYRJoevFZUDUAYM_4Phqy/exec"; 
     let isAiReady = false;
 
+    // ระบบ Login เปลี่ยนเป็น Swal
     async function handleLogin() {
         const user = document.getElementById('user').value;
         const pass = document.getElementById('pass').value;
@@ -103,8 +105,12 @@
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainPage').style.display = 'block';
                 loadModels();
-            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
-        } catch (e) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อ"); }
+            } else { 
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'รหัสผ่านไม่ถูกต้อง' });
+            }
+        } catch (e) { 
+            Swal.fire({ icon: 'error', title: 'การเชื่อมต่อ', text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้' });
+        }
     }
 
     async function loadModels() {
@@ -121,54 +127,95 @@
         const name = document.getElementById('personName').value;
         const idCard = document.getElementById('idCard').value;
         const file = document.getElementById('uploadFile').files[0];
-        if (!isAiReady || !name || !file) return alert("กรุณาใส่ข้อมูลให้ครบ");
+        if (!isAiReady || !name || !file) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลและเลือกรูปภาพ', 'warning');
 
-        const img = await faceapi.bufferToImage(file);
-        const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        if (!det) return alert("ไม่พบใบหน้า");
+        Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-        const faceCanvas = await faceapi.extractFaces(img, [det.detection.box]);
-        const resp = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "enroll", name, idCard, image: faceCanvas[0].toDataURL(), embedding: Array.from(det.descriptor) })
-        });
-        const res = await resp.json();
-        alert(res.result);
+        try {
+            const img = await faceapi.bufferToImage(file);
+            const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+            if (!det) {
+                Swal.fire('ไม่พบใบหน้า', 'กรุณาใช้รูปถ่ายที่เห็นใบหน้าชัดเจน', 'error');
+                return;
+            }
+
+            const faceCanvas = await faceapi.extractFaces(img, [det.detection.box]);
+            const resp = await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "enroll", name, idCard, image: faceCanvas[0].toDataURL(), embedding: Array.from(det.descriptor) })
+            });
+            const res = await resp.json();
+            Swal.fire('สำเร็จ', res.result, 'success');
+        } catch (e) {
+            Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+        }
     }
 
+    // 2. ปรับปรุงฟังก์ชันค้นหาบุคคลโดยใช้ SweetAlert2
     async function searchFace() {
-
-	// 1. เพิ่ม Alert แจ้งเตือนทันทีที่กดปุ่ม
-    alert("อยู่ระหว่างค้นหาข้อมูล");
         const file = document.getElementById('searchFile').files[0];
-        if (!file || !isAiReady) return;
+        if (!file) return Swal.fire('คำแนะนำ', 'กรุณาเลือกไฟล์รูปภาพก่อนครับ', 'info');
+        if (!isAiReady) return Swal.fire('รอสักครู่', 'ระบบ AI ยังโหลดไม่เสร็จสิ้น', 'warning');
 
-        const img = await faceapi.bufferToImage(file);
-        document.getElementById('queryImgView').src = URL.createObjectURL(file);
-
-        const queryDet = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        if (!queryDet) return alert("ไม่พบใบหน้าในรูปที่เลือก");
-
-        const resp = await fetch(`${GAS_URL}?action=getAllFaces`);
-        const dbFaces = await resp.json();
-
-        let bestMatch = { distance: 1.0, name: "ไม่พบข้อมูล", idCard: "", url: "" };
-        dbFaces.forEach(f => {
-            const dist = faceapi.euclideanDistance(queryDet.descriptor, new Float32Array(f.embedding));
-            if (dist < bestMatch.distance) bestMatch = { ...f, distance: dist };
+        // แสดงแจ้งเตือน "อยู่ระหว่างค้นหาข้อมูล" แบบมีวงล้อโหลด
+        Swal.fire({
+            title: 'อยู่ระหว่างค้นหาข้อมูล',
+            text: 'ระบบกำลังประมวลผลใบหน้าและตรวจสอบฐานข้อมูล...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
 
-        if (bestMatch.distance < 0.40) {
-            const score = Math.round((1 - bestMatch.distance) * 100);
-            document.getElementById('matchScore').innerText = score + "%";
-            document.getElementById('displayName').innerText = "ชื่อ: " + bestMatch.name;
-            document.getElementById('displayIdCard').innerText = "เลขบัตร: " + bestMatch.idCard;
-            document.getElementById('databaseImgView').src = bestMatch.url;
-            document.getElementById('resultPanel').style.display = 'block';
-        } else { alert("ไม่พบบุคคลที่ตรงกันในฐานข้อมูล"); }
+        try {
+            const img = await faceapi.bufferToImage(file);
+            document.getElementById('queryImgView').src = URL.createObjectURL(file);
+
+            const queryDet = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+            
+            if (!queryDet) {
+                Swal.fire({ icon: 'error', title: 'ไม่พบใบหน้า', text: 'ตรวจไม่พบใบหน้าในรูปที่เลือก' });
+                return;
+            }
+
+            const resp = await fetch(`${GAS_URL}?action=getAllFaces`);
+            const dbFaces = await resp.json();
+
+            let bestMatch = { distance: 1.0, name: "ไม่พบข้อมูล", idCard: "", url: "" };
+            dbFaces.forEach(f => {
+                const dist = faceapi.euclideanDistance(queryDet.descriptor, new Float32Array(f.embedding));
+                if (dist < bestMatch.distance) bestMatch = { ...f, distance: dist };
+            });
+
+            // ปิด Loading
+            Swal.close();
+
+            if (bestMatch.distance < 0.40) {
+                const score = Math.round((1 - bestMatch.distance) * 100);
+                
+                // แจ้งเตือนเมื่อพบข้อมูล
+                Swal.fire({
+                    icon: 'success',
+                    title: 'พบข้อมูลบุคคล',
+                    text: `คุณคือ: ${bestMatch.name} (ความเหมือน ${score}%)`,
+                    timer: 2000
+                });
+
+                document.getElementById('matchScore').innerText = score + "%";
+                document.getElementById('displayName').innerText = "ชื่อ: " + bestMatch.name;
+                document.getElementById('displayIdCard').innerText = "เลขบัตร: " + bestMatch.idCard;
+                document.getElementById('databaseImgView').src = bestMatch.url;
+                document.getElementById('resultPanel').style.display = 'block';
+            } else { 
+                Swal.fire({ icon: 'warning', title: 'ไม่พบข้อมูล', text: 'ไม่พบบุคคลที่ตรงกันในฐานข้อมูล' });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e.message });
+        }
     }
 
     async function startSync() {
+        // ... (สามารถเปลี่ยน alert ใน startSync เป็น Swal ได้เช่นกันหากต้องการ)
         const syncStatus = document.getElementById('syncStatus');
         const btn = document.getElementById('btnSync');
         btn.disabled = true;
@@ -177,7 +224,10 @@
         try {
             const resp = await fetch(`${GAS_URL}?action=syncTasks`);
             const tasks = await resp.json();
-            if (tasks.length === 0) { syncStatus.innerText = "✅ ข้อมูลอัปเดตครบถ้วนแล้ว"; btn.disabled = false; return; }
+            if (tasks.length === 0) { 
+                Swal.fire('อัปเดตแล้ว', 'ไม่มีข้อมูลใหม่ที่ต้อง Sync', 'success');
+                btn.disabled = false; return; 
+            }
 
             let done = 0;
             for (let t of tasks) {
@@ -191,8 +241,11 @@
                     }
                 } catch (e) { console.warn("Skip:", t.name); }
             }
+            Swal.fire('สำเร็จ', `Sync ข้อมูลเสร็จสิ้นทั้งหมด ${done} รายการ`, 'success');
             syncStatus.innerText = `🎉 Sync สำเร็จทั้งหมด ${done} รายการ`;
-        } catch (e) { syncStatus.innerText = "❌ เกิดข้อผิดพลาดในการ Sync"; }
+        } catch (e) { 
+            Swal.fire('ผิดพลาด', 'ไม่สามารถ Sync ข้อมูลได้', 'error');
+        }
         btn.disabled = false;
     }
 </script>
